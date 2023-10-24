@@ -1,10 +1,11 @@
 import std;
 import lexer;
+import parser;
 
 auto main(string[] args) {
   auto f = stdin;
   if(args.length > 1) f = File(args[1]);
-  
-  auto tok = f.byLine.map!(a => a.idup.lex).join;
-  tok.writeln;
+
+  auto src = cast(string)(f.byChunk(4096).join).idup;
+  src.lex.prog.writeln;
 }
