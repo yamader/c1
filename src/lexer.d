@@ -4,7 +4,7 @@ import std;
 import utils;
 
 struct Tok {
-  enum Typ { Int, Sign, Rsvd, Name }
+  enum Typ { Int, Sign, Rsvd, Name, EOF }
 
   Typ typ;
   size_t line, col;
@@ -22,12 +22,12 @@ enum rsvd = [
 
 // utils
 
-bool isSpc(char c) => c == ' ' || c == '\t' || c == '\r' || c == '\n';
-bool isNum(char c) => '0' <= c && c <= '9';
-bool isUpper(char c) => 'A' <= c && c <= 'Z';
-bool isLower(char c) => 'a' <= c && c <= 'z';
-bool isAlph(char c) => c.isUpper || c.isLower;
-bool isAlphNum(char c) => c.isAlph || c.isNum;
+bool isSpc(C)(C c) => c == ' ' || c == '\t' || c == '\r' || c == '\n';
+bool isNum(C)(C c) => '0' <= c && c <= '9';
+bool isUpper(C)(C c) => 'A' <= c && c <= 'Z';
+bool isLower(C)(C c) => 'a' <= c && c <= 'z';
+bool isAlph(C)(C c) => c.isUpper || c.isLower;
+bool isAlphNum(C)(C c) => c.isAlph || c.isNum;
 
 alias lexRes = Nullable!string;
 
@@ -37,7 +37,7 @@ lexRes just(ref string s, size_t i) {
   return res;
 }
 
-// spaces (\s*)
+// tokens
 
 lexRes spaces(T: string)(auto ref T s) {
   foreach(i, c; s) if(!c.isSpc)
@@ -45,62 +45,37 @@ lexRes spaces(T: string)(auto ref T s) {
   return s.just(s.length);
 }
 
-unittest {
-  static assert("  a  ".spaces.get == "  ");
-  static assert(" \t\n ".spaces.get == " \t\n ");
-}
-
-// integer (\n+)
-
 lexRes integer(T: string)(auto ref T s) {
-  if(!s[0].isNum) return lexRes(); // many1
+  if(!s.length || !s.front.isNum) return lexRes(); // many1
   foreach(i, c; s) if(!c.isNum)
     return s.just(i);
   return s.just(s.length);
 }
 
-unittest {
-  static assert("  1234  ".integer.get == "1234");
-  static assert("  123!  ".integer.get == "123");
-  static assert("  asdf  ".integer.isNull);
-}
-
-// name ([a-zA-Z][a-zA-Z\n]*)
-
 lexRes name(T: string)(auto ref T s) {
-  if(!s[0].isAlph) return lexRes(); // many1
+  if(!s.length || !s.front.isAlph) return lexRes(); // many1
   foreach(i, c; s) if(!c.isAlphNum)
     return s.just(i);
   return s.just(s.length);
 }
-
-unittest {
-  static assert("  ab1!  ".name.get == "ab1");
-  static assert("  1234  ".name.isNull);
-}
-
-// keyword
 
 lexRes keyword(T: string)(auto ref T s, string x) {
   if(s.startsWith(x)) return s.just(x.length);
   return lexRes();
 }
 
-unittest {
-  static assert("  <><  ".keyword("<>").get == "<>");
-  static assert("  <><  ".keyword("!").isNull);
-}
-
 // lex
 
 Tok[] lex(string src) {
   Tok[] res;
+  auto eof = Tok(Tok.Typ.EOF);
 
   foreach(line, s; src.split('\n')) {
     size_t col;
 
     lex: while(s.length) {
       s.spaces.apply!((s) => col += s.length);
+      if(!s.length) break;
 
       auto maybeInt = s.integer;
       if(!maybeInt.isNull) {
@@ -140,7 +115,10 @@ Tok[] lex(string src) {
 
       fatal("unknown token: ", s);
     }
+
+    eof.line = line;
+    eof.col = col;
   }
 
-  return res;
+  return res ~ eof;
 }

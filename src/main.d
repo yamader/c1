@@ -7,5 +7,6 @@ auto main(string[] args) {
   if(args.length > 1) f = File(args[1]);
 
   auto src = cast(string)(f.byChunk(4096).join).idup;
-  src.lex.prog.writeln;
+  auto toks = src.lex;
+  auto prog = Prog.parse(toks);
 }
