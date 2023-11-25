@@ -17,7 +17,7 @@ enum sign = [
 ];
 enum rsvd = [
   "begin", "end", "if", "then", "while", "do", "return", "function", "var", "const",
-  "odd", "write", "writeln",
+  "odd", "writeln", "write",
 ];
 
 // utils

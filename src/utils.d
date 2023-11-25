@@ -31,6 +31,21 @@ struct Sum(T...) {
     static if(isSumType!U) v = args.match!(typeof(v));
     else                   v = typeof(v)(args);
   }
+
+  auto to(U)() => v.match!U;
 }
 
-auto apply(alias f, T)(Maybe!T maybe) => maybe.isNull ? maybe : f(maybe.get);
+auto run(alias f, T)(Maybe!T maybe) {
+  if(!maybe.isNull) f(maybe.get);
+}
+
+auto apply(alias f, T)(Maybe!T maybe) if(isCallable!f) =>
+  maybe.isNull ? ReturnType!f() : f(maybe.get);
+
+auto apply(alias f, T)(Maybe!T maybe) if(!isCallable!f) =>
+  .apply!(f!T, T)(maybe);
+
+auto indent(string s, int n = 2) {
+  string pad = ' '.repeat(n).array;
+  return s.split('\n').join('\n' ~ pad);
+}
